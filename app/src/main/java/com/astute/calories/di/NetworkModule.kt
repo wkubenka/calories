@@ -1,6 +1,8 @@
 package com.astute.calories.di
 
 import android.content.Context
+import com.astute.calories.BuildConfig
+import com.astute.calories.data.remote.FdaFoodApi
 import com.astute.calories.data.remote.OpenFoodFactsApi
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
@@ -15,7 +17,21 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import java.io.File
+import java.util.concurrent.TimeUnit
+import javax.inject.Qualifier
 import javax.inject.Singleton
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class OpenFoodFactsRetrofit
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class FdaRetrofit
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class FdaApiKey
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -35,6 +51,8 @@ object NetworkModule {
 
         return OkHttpClient.Builder()
             .cache(cache)
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
             .addInterceptor { chain ->
                 val request = chain.request().newBuilder()
                     .header("User-Agent", "AstuteCalories/1.0 (Android; contact@astute-apps.com)")
@@ -51,15 +69,35 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideRetrofit(client: OkHttpClient, moshi: Moshi): Retrofit =
+    @OpenFoodFactsRetrofit
+    fun provideOpenFoodFactsRetrofit(client: OkHttpClient, moshi: Moshi): Retrofit =
         Retrofit.Builder()
-            .baseUrl("https://world.openfoodfacts.org/")
+            .baseUrl("https://us.openfoodfacts.org/")
             .client(client)
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
 
     @Provides
     @Singleton
-    fun provideOpenFoodFactsApi(retrofit: Retrofit): OpenFoodFactsApi =
+    @FdaRetrofit
+    fun provideFdaRetrofit(client: OkHttpClient, moshi: Moshi): Retrofit =
+        Retrofit.Builder()
+            .baseUrl("https://api.nal.usda.gov/fdc/v1/")
+            .client(client)
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+
+    @Provides
+    @Singleton
+    fun provideOpenFoodFactsApi(@OpenFoodFactsRetrofit retrofit: Retrofit): OpenFoodFactsApi =
         retrofit.create(OpenFoodFactsApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideFdaFoodApi(@FdaRetrofit retrofit: Retrofit): FdaFoodApi =
+        retrofit.create(FdaFoodApi::class.java)
+
+    @Provides
+    @FdaApiKey
+    fun provideFdaApiKey(): String = BuildConfig.FDA_API_KEY
 }

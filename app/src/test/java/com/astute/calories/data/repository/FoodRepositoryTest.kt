@@ -2,11 +2,14 @@ package com.astute.calories.data.repository
 
 import com.astute.calories.data.local.dao.FoodCacheDao
 import com.astute.calories.data.local.entity.CachedFood
+import com.astute.calories.data.remote.FdaFoodApi
 import com.astute.calories.data.remote.OpenFoodFactsApi
+import com.astute.calories.data.remote.dto.FdaFoodDto
+import com.astute.calories.data.remote.dto.FdaNutrientDto
+import com.astute.calories.data.remote.dto.FdaSearchResponse
 import com.astute.calories.data.remote.dto.NutrimentsDto
 import com.astute.calories.data.remote.dto.ProductDto
 import com.astute.calories.data.remote.dto.ProductLookupResponse
-import com.astute.calories.data.remote.dto.SearchResponse
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -22,8 +25,11 @@ import java.time.Instant
 class FoodRepositoryTest {
 
     private lateinit var dao: FoodCacheDao
-    private lateinit var api: OpenFoodFactsApi
+    private lateinit var offApi: OpenFoodFactsApi
+    private lateinit var fdaApi: FdaFoodApi
     private lateinit var repository: FoodRepository
+
+    private val fdaApiKey = "test-api-key"
 
     private val cachedFood = CachedFood(
         barcode = "123456",
@@ -37,12 +43,42 @@ class FoodRepositoryTest {
         lastAccessed = Instant.now()
     )
 
+    private fun fdaFood(
+        fdcId: Int,
+        description: String,
+        brandOwner: String? = null,
+        servingSize: Float? = null,
+        servingSizeUnit: String? = null,
+        householdServing: String? = null,
+        nutrients: List<FdaNutrientDto> = emptyList()
+    ) = FdaFoodDto(
+        fdcId = fdcId,
+        description = description,
+        dataType = "Branded",
+        gtinUpc = null,
+        brandOwner = brandOwner,
+        servingSize = servingSize,
+        servingSizeUnit = servingSizeUnit,
+        householdServingFullText = householdServing,
+        foodNutrients = nutrients
+    )
+
+    private fun nutrients(kcal: Float, protein: Float, carbs: Float, fat: Float) = listOf(
+        FdaNutrientDto("208", "Energy", "KCAL", kcal),
+        FdaNutrientDto("203", "Protein", "G", protein),
+        FdaNutrientDto("205", "Carbohydrate, by difference", "G", carbs),
+        FdaNutrientDto("204", "Total lipid (fat)", "G", fat)
+    )
+
     @BeforeEach
     fun setup() {
         dao = mockk(relaxed = true)
-        api = mockk()
-        repository = FoodRepository(dao, api)
+        offApi = mockk()
+        fdaApi = mockk()
+        repository = FoodRepository(dao, offApi, fdaApi, fdaApiKey)
     }
+
+    // --- Search (FDA) ---
 
     @Test
     fun `searchFoods returns cached results when available`() = runTest {
@@ -54,27 +90,25 @@ class FoodRepositoryTest {
         val foods = (result as SearchResult.Success).foods
         assertEquals(1, foods.size)
         assertEquals("Test Food", foods[0].name)
-        coVerify(exactly = 0) { api.searchByName(any()) }
+        coVerify(exactly = 0) { fdaApi.searchFoods(any(), any()) }
     }
 
     @Test
-    fun `searchFoods falls back to API when cache is empty`() = runTest {
+    fun `searchFoods falls back to FDA API when cache is empty`() = runTest {
         coEvery { dao.searchByName("banana") } returns emptyList()
-        coEvery { api.searchByName("banana") } returns SearchResponse(
-            products = listOf(
-                ProductDto(
-                    code = "789",
-                    productName = "Banana",
-                    nutriments = NutrimentsDto(
-                        energyKcal100g = 89f,
-                        proteins100g = 1.1f,
-                        carbohydrates100g = 23f,
-                        fat100g = 0.3f
-                    ),
-                    servingSize = "120g",
-                    imageUrl = null
+        coEvery { fdaApi.searchFoods(fdaApiKey, "banana") } returns FdaSearchResponse(
+            foods = listOf(
+                fdaFood(
+                    fdcId = 789,
+                    description = "BANANA",
+                    brandOwner = "Chiquita",
+                    servingSize = 120f,
+                    servingSizeUnit = "g",
+                    householdServing = "1 medium (120g)",
+                    nutrients = nutrients(107f, 1.3f, 27.6f, 0.4f)
                 )
-            )
+            ),
+            totalHits = 1, currentPage = 1, totalPages = 1
         )
 
         val result = repository.searchFoods("banana")
@@ -82,22 +116,115 @@ class FoodRepositoryTest {
         assertTrue(result is SearchResult.Success)
         val foods = (result as SearchResult.Success).foods
         assertEquals(1, foods.size)
-        assertEquals("Banana", foods[0].name)
+        assertEquals("Banana (Chiquita)", foods[0].name)
+        // 107 kcal per 120g serving -> 107 * (100/120) = 89
         assertEquals(89, foods[0].calories)
+        assertEquals("789", foods[0].barcode)
         coVerify { dao.upsertAll(any()) }
+    }
+
+    @Test
+    fun `searchFoods normalizes per-serving nutrients to per 100g`() = runTest {
+        coEvery { dao.searchByName("cheese") } returns emptyList()
+        coEvery { fdaApi.searchFoods(fdaApiKey, "cheese") } returns FdaSearchResponse(
+            foods = listOf(
+                fdaFood(
+                    fdcId = 100,
+                    description = "CHEDDAR CHEESE",
+                    servingSize = 28f,
+                    servingSizeUnit = "g",
+                    householdServing = "1 oz",
+                    nutrients = nutrients(110f, 7f, 1f, 9f)
+                )
+            ),
+            totalHits = 1, currentPage = 1, totalPages = 1
+        )
+
+        val result = repository.searchFoods("cheese") as SearchResult.Success
+        val food = result.foods[0]
+        // 110 kcal per 28g -> 110 * (100/28) = 392
+        assertEquals(392, food.calories)
+        assertEquals(25f, food.proteinG)
+        assertEquals(28f, food.servingSizeG)
+        assertEquals("1 oz", food.servingSizeLabel)
+    }
+
+    @Test
+    fun `searchFoods handles null serving size gracefully`() = runTest {
+        coEvery { dao.searchByName("generic") } returns emptyList()
+        coEvery { fdaApi.searchFoods(fdaApiKey, "generic") } returns FdaSearchResponse(
+            foods = listOf(
+                fdaFood(
+                    fdcId = 200,
+                    description = "GENERIC FOOD",
+                    servingSize = null,
+                    nutrients = nutrients(100f, 5f, 10f, 3f)
+                )
+            ),
+            totalHits = 1, currentPage = 1, totalPages = 1
+        )
+
+        val result = repository.searchFoods("generic") as SearchResult.Success
+        val food = result.foods[0]
+        // No serving size → factor = 1, stored as-is
+        assertEquals(100, food.calories)
+        assertNull(food.servingSizeG)
+    }
+
+    @Test
+    fun `searchFoods title-cases FDA description`() = runTest {
+        coEvery { dao.searchByName("bread") } returns emptyList()
+        coEvery { fdaApi.searchFoods(fdaApiKey, "bread") } returns FdaSearchResponse(
+            foods = listOf(
+                fdaFood(
+                    fdcId = 300,
+                    description = "WHOLE WHEAT BREAD",
+                    brandOwner = "Wonder",
+                    servingSize = 30f,
+                    servingSizeUnit = "g",
+                    nutrients = nutrients(80f, 3f, 14f, 1f)
+                )
+            ),
+            totalHits = 1, currentPage = 1, totalPages = 1
+        )
+
+        val result = repository.searchFoods("bread") as SearchResult.Success
+        assertEquals("Whole Wheat Bread (Wonder)", result.foods[0].name)
     }
 
     @Test
     fun `searchFoods returns error on API failure`() = runTest {
         coEvery { dao.searchByName("fail") } returns emptyList()
-        coEvery { api.searchByName("fail") } throws RuntimeException("Network error")
+        coEvery { fdaApi.searchFoods(fdaApiKey, "fail") } throws RuntimeException("Network error")
 
         val result = repository.searchFoods("fail")
 
         assertTrue(result is SearchResult.Error)
-        val error = (result as SearchResult.Error)
-        assertTrue(error.message.isNotBlank())
+        assertTrue((result as SearchResult.Error).message.isNotBlank())
     }
+
+    @Test
+    fun `searchFoods builds serving label from size and unit when no household text`() = runTest {
+        coEvery { dao.searchByName("yogurt") } returns emptyList()
+        coEvery { fdaApi.searchFoods(fdaApiKey, "yogurt") } returns FdaSearchResponse(
+            foods = listOf(
+                fdaFood(
+                    fdcId = 400,
+                    description = "GREEK YOGURT",
+                    servingSize = 170f,
+                    servingSizeUnit = "g",
+                    householdServing = null,
+                    nutrients = nutrients(100f, 17f, 6f, 0.7f)
+                )
+            ),
+            totalHits = 1, currentPage = 1, totalPages = 1
+        )
+
+        val result = repository.searchFoods("yogurt") as SearchResult.Success
+        assertEquals("170 g", result.foods[0].servingSizeLabel)
+    }
+
+    // --- Barcode lookup (OpenFoodFacts) ---
 
     @Test
     fun `lookupByBarcode returns cached food when available`() = runTest {
@@ -107,13 +234,13 @@ class FoodRepositoryTest {
 
         assertNotNull(result)
         assertEquals("Test Food", result?.name)
-        coVerify(exactly = 0) { api.getByBarcode(any()) }
+        coVerify(exactly = 0) { offApi.getByBarcode(any()) }
     }
 
     @Test
-    fun `lookupByBarcode falls back to API when not cached`() = runTest {
+    fun `lookupByBarcode falls back to OpenFoodFacts when not cached`() = runTest {
         coEvery { dao.getByBarcode("999") } returns null
-        coEvery { api.getByBarcode("999") } returns ProductLookupResponse(
+        coEvery { offApi.getByBarcode("999") } returns ProductLookupResponse(
             status = 1,
             product = ProductDto(
                 code = "999",
@@ -137,87 +264,9 @@ class FoodRepositoryTest {
     }
 
     @Test
-    fun `searchFoods parses simple gram serving size`() = runTest {
-        coEvery { dao.searchByName("apple") } returns emptyList()
-        coEvery { api.searchByName("apple") } returns SearchResponse(
-            products = listOf(
-                ProductDto("1", "Apple", NutrimentsDto(52f, 0.3f, 14f, 0.2f), "150g", null)
-            )
-        )
-
-        val result = repository.searchFoods("apple") as SearchResult.Success
-        assertEquals(150f, result.foods[0].servingSizeG)
-    }
-
-    @Test
-    fun `searchFoods parses grams from compound serving size`() = runTest {
-        coEvery { dao.searchByName("milk") } returns emptyList()
-        coEvery { api.searchByName("milk") } returns SearchResponse(
-            products = listOf(
-                ProductDto("2", "Milk", NutrimentsDto(42f, 3.4f, 5f, 1f), "250 ml (253 g)", null)
-            )
-        )
-
-        val result = repository.searchFoods("milk") as SearchResult.Success
-        assertEquals(253f, result.foods[0].servingSizeG)
-    }
-
-    @Test
-    fun `searchFoods parses grams from parenthetical serving size`() = runTest {
-        coEvery { dao.searchByName("bread") } returns emptyList()
-        coEvery { api.searchByName("bread") } returns SearchResponse(
-            products = listOf(
-                ProductDto("3", "Bread", NutrimentsDto(265f, 9f, 49f, 3.2f), "2 slices (56g)", null)
-            )
-        )
-
-        val result = repository.searchFoods("bread") as SearchResult.Success
-        assertEquals(56f, result.foods[0].servingSizeG)
-    }
-
-    @Test
-    fun `searchFoods falls back to first number when no grams unit`() = runTest {
-        coEvery { dao.searchByName("cup") } returns emptyList()
-        coEvery { api.searchByName("cup") } returns SearchResponse(
-            products = listOf(
-                ProductDto("4", "Yogurt", NutrimentsDto(59f, 10f, 3.6f, 0.4f), "1 cup", null)
-            )
-        )
-
-        val result = repository.searchFoods("cup") as SearchResult.Success
-        assertEquals(1f, result.foods[0].servingSizeG)
-    }
-
-    @Test
-    fun `searchFoods returns null servingSizeG for null serving size`() = runTest {
-        coEvery { dao.searchByName("mystery") } returns emptyList()
-        coEvery { api.searchByName("mystery") } returns SearchResponse(
-            products = listOf(
-                ProductDto("5", "Mystery Food", NutrimentsDto(100f, 5f, 10f, 3f), null, null)
-            )
-        )
-
-        val result = repository.searchFoods("mystery") as SearchResult.Success
-        assertNull(result.foods[0].servingSizeG)
-    }
-
-    @Test
-    fun `searchFoods stores servingSizeLabel from API`() = runTest {
-        coEvery { dao.searchByName("juice") } returns emptyList()
-        coEvery { api.searchByName("juice") } returns SearchResponse(
-            products = listOf(
-                ProductDto("6", "Orange Juice", NutrimentsDto(45f, 0.7f, 10f, 0.2f), "250 ml (250g)", null)
-            )
-        )
-
-        val result = repository.searchFoods("juice") as SearchResult.Success
-        assertEquals("250 ml (250g)", result.foods[0].servingSizeLabel)
-    }
-
-    @Test
     fun `lookupByBarcode returns null when product not found`() = runTest {
         coEvery { dao.getByBarcode("000") } returns null
-        coEvery { api.getByBarcode("000") } returns ProductLookupResponse(
+        coEvery { offApi.getByBarcode("000") } returns ProductLookupResponse(
             status = 0,
             product = null
         )

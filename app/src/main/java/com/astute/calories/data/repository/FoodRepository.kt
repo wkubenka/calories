@@ -1,9 +1,15 @@
 package com.astute.calories.data.repository
 
+import android.util.Log
 import com.astute.calories.data.local.dao.FoodCacheDao
 import com.astute.calories.data.local.entity.CachedFood
+import com.astute.calories.data.remote.FdaFoodApi
 import com.astute.calories.data.remote.OpenFoodFactsApi
+import com.astute.calories.data.remote.dto.FdaFoodDto
 import com.astute.calories.data.remote.dto.ProductDto
+import com.astute.calories.di.FdaApiKey
+import com.squareup.moshi.JsonDataException
+import com.squareup.moshi.JsonEncodingException
 import retrofit2.HttpException
 import java.io.IOException
 import java.time.Instant
@@ -18,27 +24,38 @@ sealed class SearchResult {
 @Singleton
 class FoodRepository @Inject constructor(
     private val foodCacheDao: FoodCacheDao,
-    private val api: OpenFoodFactsApi
+    private val openFoodFactsApi: OpenFoodFactsApi,
+    private val fdaApi: FdaFoodApi,
+    @FdaApiKey private val fdaApiKey: String
 ) {
     suspend fun searchFoods(query: String): SearchResult {
         // Return cached hits first
         val cached = foodCacheDao.searchByName(query)
         if (cached.isNotEmpty()) return SearchResult.Success(cached)
 
-        // Fall back to API
+        // Fall back to FDA API
         return try {
-            val response = api.searchByName(query)
-            val foods = response.products
+            val response = fdaApi.searchFoods(apiKey = fdaApiKey, query = query)
+            val foods = response.foods
                 ?.mapNotNull { it.toCachedFood() }
                 ?: emptyList()
             if (foods.isNotEmpty()) foodCacheDao.upsertAll(foods)
             SearchResult.Success(foods)
         } catch (e: HttpException) {
+            Log.e("FoodRepository", "HTTP error searching foods", e)
             SearchResult.Error("Server error (${e.code()}). Please try again.")
+        } catch (e: JsonDataException) {
+            Log.e("FoodRepository", "JSON parse error searching foods", e)
+            SearchResult.Error("Data format error: ${e.message}")
+        } catch (e: JsonEncodingException) {
+            Log.e("FoodRepository", "JSON encoding error searching foods", e)
+            SearchResult.Error("Data format error: ${e.message}")
         } catch (e: IOException) {
-            SearchResult.Error("Network error. Check your connection and try again.")
-        } catch (_: Exception) {
-            SearchResult.Error("Something went wrong. Please try again.")
+            Log.e("FoodRepository", "IO error searching foods", e)
+            SearchResult.Error("Network error: ${e.javaClass.simpleName} - ${e.message}")
+        } catch (e: Exception) {
+            Log.e("FoodRepository", "Unexpected error searching foods", e)
+            SearchResult.Error("Error: ${e.javaClass.simpleName} - ${e.message}")
         }
     }
 
@@ -46,9 +63,9 @@ class FoodRepository @Inject constructor(
         // Check cache first
         foodCacheDao.getByBarcode(barcode)?.let { return it }
 
-        // Fall back to API
+        // Fall back to OpenFoodFacts API (FDA has no barcode endpoint)
         return try {
-            val response = api.getByBarcode(barcode)
+            val response = openFoodFactsApi.getByBarcode(barcode)
             if (response.status == 1 && response.product != null) {
                 val food = response.product.toCachedFood()
                 food?.let { foodCacheDao.upsert(it) }
@@ -59,16 +76,66 @@ class FoodRepository @Inject constructor(
         }
     }
 
-    /**
-     * Extract grams from serving size strings like "30g", "1 cup (240g)", "250 ml (253 g)".
-     * Prefers a number followed by "g" (grams). Falls back to the first number in the string.
-     */
+    // --- FDA mapping ---
+
+    private fun FdaFoodDto.toCachedFood(): CachedFood? {
+        val name = description ?: return null
+        if (name.isBlank()) return null
+
+        val nutrientMap = foodNutrients
+            ?.filter { it.nutrientNumber != null && it.value != null }
+            ?.associate { it.nutrientNumber!! to it.value!! }
+            ?: emptyMap()
+
+        val rawCalories = nutrientMap["208"] ?: 0f
+        val rawProtein = nutrientMap["203"] ?: 0f
+        val rawCarbs = nutrientMap["205"] ?: 0f
+        val rawFat = nutrientMap["204"] ?: 0f
+
+        // Branded data nutrients are per serving — normalize to per 100g
+        val servingG = servingSize?.takeIf { it > 0f }
+        val factor = if (servingG != null) 100f / servingG else 1f
+
+        return CachedFood(
+            barcode = fdcId.toString(),
+            name = formatFdaName(name, brandOwner),
+            calories = (rawCalories * factor).toInt(),
+            proteinG = rawProtein * factor,
+            carbsG = rawCarbs * factor,
+            fatG = rawFat * factor,
+            servingSizeG = servingG,
+            servingSizeLabel = buildFdaServingLabel(),
+            imageUrl = null,
+            lastAccessed = Instant.now()
+        )
+    }
+
+    private fun FdaFoodDto.buildFdaServingLabel(): String? {
+        householdServingFullText?.takeIf { it.isNotBlank() }?.let { return it }
+        if (servingSize != null && servingSizeUnit != null) {
+            return "${servingSize.toInt()} ${servingSizeUnit.lowercase()}"
+        }
+        return null
+    }
+
+    private fun formatFdaName(description: String, brandOwner: String?): String {
+        // FDA descriptions are ALL CAPS — title-case them
+        val titleCased = description.lowercase().split(" ").joinToString(" ") { word ->
+            word.replaceFirstChar { it.uppercase() }
+        }
+        return if (!brandOwner.isNullOrBlank()) {
+            "$titleCased ($brandOwner)"
+        } else {
+            titleCased
+        }
+    }
+
+    // --- OpenFoodFacts mapping (used for barcode lookups) ---
+
     private fun parseServingSizeGrams(servingSize: String?): Float? {
         if (servingSize.isNullOrBlank()) return null
-        // Match a number directly before 'g' (e.g., "240g", "253 g", "30.5g")
         val gramsMatch = Regex("""(\d+\.?\d*)\s*g\b""", RegexOption.IGNORE_CASE).find(servingSize)
         if (gramsMatch != null) return gramsMatch.groupValues[1].toFloatOrNull()
-        // Fall back to the first number in the string
         val firstNumber = Regex("""(\d+\.?\d*)""").find(servingSize)
         return firstNumber?.groupValues?.get(1)?.toFloatOrNull()
     }
