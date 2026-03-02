@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -125,6 +126,22 @@ class HomeViewModel @Inject constructor(
                 date = LocalDate.now()
             )
             entries.forEach { dailyLogRepository.addEntry(it) }
+        }
+    }
+
+    fun copyYesterday() {
+        viewModelScope.launch {
+            val yesterday = LocalDate.now().minusDays(1)
+            val entries = dailyLogRepository.getEntriesForDate(yesterday).first()
+            entries.forEach { entry ->
+                dailyLogRepository.addEntry(
+                    entry.copy(
+                        id = 0,
+                        date = LocalDate.now(),
+                        addedAt = Instant.now()
+                    )
+                )
+            }
         }
     }
 }

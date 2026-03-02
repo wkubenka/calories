@@ -96,6 +96,11 @@ dependencies {
     implementation(libs.camerax.view)
     implementation(libs.mlkit.barcode)
 
+    // WorkManager
+    implementation(libs.work.runtime)
+    implementation(libs.hilt.work)
+    ksp(libs.hilt.work.compiler)
+
     // Coroutines
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
