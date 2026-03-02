@@ -59,6 +59,20 @@ class FoodRepository @Inject constructor(
         }
     }
 
+    /**
+     * Extract grams from serving size strings like "30g", "1 cup (240g)", "250 ml (253 g)".
+     * Prefers a number followed by "g" (grams). Falls back to the first number in the string.
+     */
+    private fun parseServingSizeGrams(servingSize: String?): Float? {
+        if (servingSize.isNullOrBlank()) return null
+        // Match a number directly before 'g' (e.g., "240g", "253 g", "30.5g")
+        val gramsMatch = Regex("""(\d+\.?\d*)\s*g\b""", RegexOption.IGNORE_CASE).find(servingSize)
+        if (gramsMatch != null) return gramsMatch.groupValues[1].toFloatOrNull()
+        // Fall back to the first number in the string
+        val firstNumber = Regex("""(\d+\.?\d*)""").find(servingSize)
+        return firstNumber?.groupValues?.get(1)?.toFloatOrNull()
+    }
+
     private fun ProductDto.toCachedFood(): CachedFood? {
         val barcode = code ?: return null
         val name = productName ?: return null
@@ -71,7 +85,7 @@ class FoodRepository @Inject constructor(
             proteinG = nutriments?.proteins100g ?: 0f,
             carbsG = nutriments?.carbohydrates100g ?: 0f,
             fatG = nutriments?.fat100g ?: 0f,
-            servingSizeG = servingSize?.filter { it.isDigit() || it == '.' }?.toFloatOrNull(),
+            servingSizeG = parseServingSizeGrams(servingSize),
             servingSizeLabel = servingSize?.trim()?.takeIf { it.isNotBlank() },
             imageUrl = imageUrl,
             lastAccessed = Instant.now()
