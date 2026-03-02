@@ -8,11 +8,11 @@ import retrofit2.http.Query
 
 interface OpenFoodFactsApi {
 
-    @GET("cgi/search.pl")
+    @GET("api/v2/search")
     suspend fun searchByName(
         @Query("search_terms") query: String,
-        @Query("json") json: Int = 1,
-        @Query("page_size") pageSize: Int = 20
+        @Query("page_size") pageSize: Int = 20,
+        @Query("fields") fields: String = "code,product_name,nutriments,serving_size,image_url"
     ): SearchResponse
 
     @GET("api/v0/product/{barcode}.json")

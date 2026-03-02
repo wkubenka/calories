@@ -5,6 +5,7 @@ import com.astute.calories.data.local.entity.CachedFood
 import com.astute.calories.data.local.entity.MealCategory
 import com.astute.calories.data.repository.DailyLogRepository
 import com.astute.calories.data.repository.FoodRepository
+import com.astute.calories.data.repository.SearchResult
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -63,6 +64,52 @@ class FoodSearchViewModelTest {
             assertTrue(state.results.isEmpty())
             cancelAndIgnoreRemainingEvents()
         }
+    }
+
+    @Test
+    fun `onQueryChanged updates query immediately`() = runTest {
+        viewModel.onQueryChanged("ban")
+
+        assertEquals("ban", viewModel.uiState.value.query)
+    }
+
+    @Test
+    fun `search triggers after debounce for queries with 2+ characters`() = runTest {
+        coEvery { foodRepository.searchFoods("banana") } returns SearchResult.Success(listOf(sampleFood))
+
+        viewModel.onQueryChanged("banana")
+        testDispatcher.scheduler.advanceTimeBy(400)
+        testDispatcher.scheduler.runCurrent()
+
+        val state = viewModel.uiState.value
+        assertEquals(1, state.results.size)
+        assertEquals("Banana", state.results[0].name)
+    }
+
+    @Test
+    fun `search clears results for queries under 2 characters`() = runTest {
+        coEvery { foodRepository.searchFoods("ba") } returns SearchResult.Success(listOf(sampleFood))
+
+        viewModel.onQueryChanged("ba")
+        testDispatcher.scheduler.advanceTimeBy(400)
+        testDispatcher.scheduler.runCurrent()
+
+        viewModel.onQueryChanged("b")
+        testDispatcher.scheduler.advanceTimeBy(400)
+        testDispatcher.scheduler.runCurrent()
+
+        assertTrue(viewModel.uiState.value.results.isEmpty())
+    }
+
+    @Test
+    fun `search error sets errorMessage`() = runTest {
+        coEvery { foodRepository.searchFoods("fail") } returns SearchResult.Error("Network error")
+
+        viewModel.onQueryChanged("fail")
+        testDispatcher.scheduler.advanceTimeBy(400)
+        testDispatcher.scheduler.runCurrent()
+
+        assertEquals("Network error", viewModel.uiState.value.errorMessage)
     }
 
     @Test

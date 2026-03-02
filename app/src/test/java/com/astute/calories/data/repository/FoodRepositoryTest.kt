@@ -137,6 +137,84 @@ class FoodRepositoryTest {
     }
 
     @Test
+    fun `searchFoods parses simple gram serving size`() = runTest {
+        coEvery { dao.searchByName("apple") } returns emptyList()
+        coEvery { api.searchByName("apple") } returns SearchResponse(
+            products = listOf(
+                ProductDto("1", "Apple", NutrimentsDto(52f, 0.3f, 14f, 0.2f), "150g", null)
+            )
+        )
+
+        val result = repository.searchFoods("apple") as SearchResult.Success
+        assertEquals(150f, result.foods[0].servingSizeG)
+    }
+
+    @Test
+    fun `searchFoods parses grams from compound serving size`() = runTest {
+        coEvery { dao.searchByName("milk") } returns emptyList()
+        coEvery { api.searchByName("milk") } returns SearchResponse(
+            products = listOf(
+                ProductDto("2", "Milk", NutrimentsDto(42f, 3.4f, 5f, 1f), "250 ml (253 g)", null)
+            )
+        )
+
+        val result = repository.searchFoods("milk") as SearchResult.Success
+        assertEquals(253f, result.foods[0].servingSizeG)
+    }
+
+    @Test
+    fun `searchFoods parses grams from parenthetical serving size`() = runTest {
+        coEvery { dao.searchByName("bread") } returns emptyList()
+        coEvery { api.searchByName("bread") } returns SearchResponse(
+            products = listOf(
+                ProductDto("3", "Bread", NutrimentsDto(265f, 9f, 49f, 3.2f), "2 slices (56g)", null)
+            )
+        )
+
+        val result = repository.searchFoods("bread") as SearchResult.Success
+        assertEquals(56f, result.foods[0].servingSizeG)
+    }
+
+    @Test
+    fun `searchFoods falls back to first number when no grams unit`() = runTest {
+        coEvery { dao.searchByName("cup") } returns emptyList()
+        coEvery { api.searchByName("cup") } returns SearchResponse(
+            products = listOf(
+                ProductDto("4", "Yogurt", NutrimentsDto(59f, 10f, 3.6f, 0.4f), "1 cup", null)
+            )
+        )
+
+        val result = repository.searchFoods("cup") as SearchResult.Success
+        assertEquals(1f, result.foods[0].servingSizeG)
+    }
+
+    @Test
+    fun `searchFoods returns null servingSizeG for null serving size`() = runTest {
+        coEvery { dao.searchByName("mystery") } returns emptyList()
+        coEvery { api.searchByName("mystery") } returns SearchResponse(
+            products = listOf(
+                ProductDto("5", "Mystery Food", NutrimentsDto(100f, 5f, 10f, 3f), null, null)
+            )
+        )
+
+        val result = repository.searchFoods("mystery") as SearchResult.Success
+        assertNull(result.foods[0].servingSizeG)
+    }
+
+    @Test
+    fun `searchFoods stores servingSizeLabel from API`() = runTest {
+        coEvery { dao.searchByName("juice") } returns emptyList()
+        coEvery { api.searchByName("juice") } returns SearchResponse(
+            products = listOf(
+                ProductDto("6", "Orange Juice", NutrimentsDto(45f, 0.7f, 10f, 0.2f), "250 ml (250g)", null)
+            )
+        )
+
+        val result = repository.searchFoods("juice") as SearchResult.Success
+        assertEquals("250 ml (250g)", result.foods[0].servingSizeLabel)
+    }
+
+    @Test
     fun `lookupByBarcode returns null when product not found`() = runTest {
         coEvery { dao.getByBarcode("000") } returns null
         coEvery { api.getByBarcode("000") } returns ProductLookupResponse(
