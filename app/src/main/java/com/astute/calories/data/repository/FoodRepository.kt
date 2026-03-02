@@ -4,19 +4,25 @@ import com.astute.calories.data.local.dao.FoodCacheDao
 import com.astute.calories.data.local.entity.CachedFood
 import com.astute.calories.data.remote.OpenFoodFactsApi
 import com.astute.calories.data.remote.dto.ProductDto
+import java.io.IOException
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
+
+sealed class SearchResult {
+    data class Success(val foods: List<CachedFood>) : SearchResult()
+    data class Error(val message: String) : SearchResult()
+}
 
 @Singleton
 class FoodRepository @Inject constructor(
     private val foodCacheDao: FoodCacheDao,
     private val api: OpenFoodFactsApi
 ) {
-    suspend fun searchFoods(query: String): List<CachedFood> {
+    suspend fun searchFoods(query: String): SearchResult {
         // Return cached hits first
         val cached = foodCacheDao.searchByName(query)
-        if (cached.isNotEmpty()) return cached
+        if (cached.isNotEmpty()) return SearchResult.Success(cached)
 
         // Fall back to API
         return try {
@@ -24,10 +30,12 @@ class FoodRepository @Inject constructor(
             val foods = response.products
                 ?.mapNotNull { it.toCachedFood() }
                 ?: emptyList()
-            foodCacheDao.upsertAll(foods)
-            foods
+            if (foods.isNotEmpty()) foodCacheDao.upsertAll(foods)
+            SearchResult.Success(foods)
+        } catch (e: IOException) {
+            SearchResult.Error("No internet connection. Check your network and try again.")
         } catch (_: Exception) {
-            emptyList()
+            SearchResult.Error("Something went wrong. Please try again.")
         }
     }
 

@@ -24,10 +24,11 @@ import com.astute.calories.data.local.entity.CachedFood
 @Composable
 fun FoodResultItem(
     food: CachedFood,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),

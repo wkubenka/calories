@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -55,10 +56,16 @@ fun FoodSearchScreen(
             )
         }
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(padding),
+            contentAlignment = Alignment.TopCenter
+        ) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = 600.dp)
+                .fillMaxSize()
         ) {
             OutlinedTextField(
                 value = uiState.query,
@@ -86,6 +93,20 @@ fun FoodSearchScreen(
                         CircularProgressIndicator()
                     }
                 }
+                uiState.errorMessage != null -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = uiState.errorMessage!!,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
+                }
                 uiState.results.isEmpty() && uiState.query.length >= 2 -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -99,8 +120,9 @@ fun FoodSearchScreen(
                 }
                 else -> {
                     LazyColumn {
-                        items(uiState.results) { food ->
+                        items(uiState.results, key = { it.barcode }) { food ->
                             FoodResultItem(
+                                modifier = Modifier.animateItem(),
                                 food = food,
                                 onClick = { selectedFood = food }
                             )
@@ -109,6 +131,7 @@ fun FoodSearchScreen(
                     }
                 }
             }
+        }
         }
     }
 

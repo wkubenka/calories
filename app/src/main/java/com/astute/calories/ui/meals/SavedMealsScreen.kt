@@ -106,7 +106,7 @@ fun SavedMealsScreen(
                             var expanded by rememberSaveable { mutableStateOf(false) }
 
                             Card(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.animateItem().fillMaxWidth(),
                                 colors = CardDefaults.cardColors(
                                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                                 )

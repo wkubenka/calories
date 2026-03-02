@@ -9,8 +9,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun MacroSummary(
@@ -31,7 +32,12 @@ fun MacroSummary(
 
 @Composable
 private fun MacroItem(label: String, grams: Float) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.semantics(mergeDescendants = true) {
+            contentDescription = "$label ${grams.toInt()} grams"
+        }
+    ) {
         Text(
             text = "${grams.toInt()}g",
             style = MaterialTheme.typography.titleMedium,

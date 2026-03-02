@@ -1,10 +1,12 @@
 package com.astute.calories.ui.home
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -71,10 +73,16 @@ fun HomeScreen(
             }
         }
     ) { padding ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(padding),
+            contentAlignment = Alignment.TopCenter
+        ) {
+        LazyColumn(
+            modifier = Modifier
+                .widthIn(max = 600.dp)
+                .fillMaxSize()
                 .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -101,8 +109,9 @@ fun HomeScreen(
                 }
             }
 
-            items(MealCategory.entries) { category ->
+            items(MealCategory.entries, key = { it.name }) { category ->
                 MealCategoryCard(
+                    modifier = Modifier.animateItem(),
                     category = category,
                     entries = uiState.entriesByCategory[category] ?: emptyList(),
                     savedMeals = uiState.savedMealsByCategory[category] ?: emptyList(),
@@ -114,6 +123,7 @@ fun HomeScreen(
             }
 
             item { Spacer(modifier = Modifier.height(80.dp)) }
+        }
         }
     }
 

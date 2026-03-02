@@ -14,6 +14,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Instant
@@ -47,10 +48,12 @@ class FoodRepositoryTest {
     fun `searchFoods returns cached results when available`() = runTest {
         coEvery { dao.searchByName("test") } returns listOf(cachedFood)
 
-        val results = repository.searchFoods("test")
+        val result = repository.searchFoods("test")
 
-        assertEquals(1, results.size)
-        assertEquals("Test Food", results[0].name)
+        assertTrue(result is SearchResult.Success)
+        val foods = (result as SearchResult.Success).foods
+        assertEquals(1, foods.size)
+        assertEquals("Test Food", foods[0].name)
         coVerify(exactly = 0) { api.searchByName(any()) }
     }
 
@@ -74,22 +77,26 @@ class FoodRepositoryTest {
             )
         )
 
-        val results = repository.searchFoods("banana")
+        val result = repository.searchFoods("banana")
 
-        assertEquals(1, results.size)
-        assertEquals("Banana", results[0].name)
-        assertEquals(89, results[0].calories)
+        assertTrue(result is SearchResult.Success)
+        val foods = (result as SearchResult.Success).foods
+        assertEquals(1, foods.size)
+        assertEquals("Banana", foods[0].name)
+        assertEquals(89, foods[0].calories)
         coVerify { dao.upsertAll(any()) }
     }
 
     @Test
-    fun `searchFoods returns empty on API failure`() = runTest {
+    fun `searchFoods returns error on API failure`() = runTest {
         coEvery { dao.searchByName("fail") } returns emptyList()
         coEvery { api.searchByName("fail") } throws RuntimeException("Network error")
 
-        val results = repository.searchFoods("fail")
+        val result = repository.searchFoods("fail")
 
-        assertEquals(0, results.size)
+        assertTrue(result is SearchResult.Error)
+        val error = (result as SearchResult.Error)
+        assertTrue(error.message.isNotBlank())
     }
 
     @Test

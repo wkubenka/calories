@@ -7,6 +7,7 @@ import com.astute.calories.data.local.entity.LogEntry
 import com.astute.calories.data.local.entity.MealCategory
 import com.astute.calories.data.repository.DailyLogRepository
 import com.astute.calories.data.repository.FoodRepository
+import com.astute.calories.data.repository.SearchResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,7 +15,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -25,7 +25,8 @@ import javax.inject.Inject
 data class FoodSearchUiState(
     val query: String = "",
     val results: List<CachedFood> = emptyList(),
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null
 )
 
 @OptIn(FlowPreview::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
@@ -44,9 +45,16 @@ class FoodSearchViewModel @Inject constructor(
             if (query.length < 2) {
                 FoodSearchUiState(query = query)
             } else {
-                FoodSearchUiState(query = query, isLoading = true).also { /* emit loading */ }
-                val results = foodRepository.searchFoods(query)
-                FoodSearchUiState(query = query, results = results)
+                when (val result = foodRepository.searchFoods(query)) {
+                    is SearchResult.Success -> FoodSearchUiState(
+                        query = query,
+                        results = result.foods
+                    )
+                    is SearchResult.Error -> FoodSearchUiState(
+                        query = query,
+                        errorMessage = result.message
+                    )
+                }
             }
         }
         .stateIn(

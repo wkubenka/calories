@@ -13,6 +13,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -34,7 +36,15 @@ fun CalorieProgressRing(
     val trackColor = MaterialTheme.colorScheme.surfaceVariant
     val overColor = MaterialTheme.colorScheme.error
 
-    Box(modifier = modifier.size(180.dp), contentAlignment = Alignment.Center) {
+    val percent = if (goal > 0) (consumed * 100 / goal) else 0
+    val description = "$consumed of $goal calories, $percent percent"
+
+    Box(
+        modifier = modifier
+            .size(180.dp)
+            .semantics { contentDescription = description },
+        contentAlignment = Alignment.Center
+    ) {
         Canvas(modifier = Modifier.size(180.dp)) {
             val strokeWidth = 14.dp.toPx()
             val stroke = Stroke(width = strokeWidth, cap = StrokeCap.Round)
