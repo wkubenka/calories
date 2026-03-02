@@ -11,7 +11,7 @@ interface FoodCacheDao {
     @Query("SELECT * FROM cached_foods WHERE barcode = :barcode")
     suspend fun getByBarcode(barcode: String): CachedFood?
 
-    @Query("SELECT * FROM cached_foods WHERE name LIKE '%' || :query || '%' ORDER BY lastAccessed DESC LIMIT :limit")
+    @Query("SELECT * FROM cached_foods WHERE searchQuery = :query ORDER BY lastAccessed DESC LIMIT :limit")
     suspend fun searchByName(query: String, limit: Int = 20): List<CachedFood>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

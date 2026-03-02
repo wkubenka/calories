@@ -37,7 +37,7 @@ class FoodRepository @Inject constructor(
         return try {
             val response = fdaApi.searchFoods(apiKey = fdaApiKey, query = query)
             val foods = response.foods
-                ?.mapNotNull { it.toCachedFood() }
+                ?.mapNotNull { it.toCachedFood(query) }
                 ?: emptyList()
             if (foods.isNotEmpty()) foodCacheDao.upsertAll(foods)
             SearchResult.Success(foods)
@@ -78,7 +78,7 @@ class FoodRepository @Inject constructor(
 
     // --- FDA mapping ---
 
-    private fun FdaFoodDto.toCachedFood(): CachedFood? {
+    private fun FdaFoodDto.toCachedFood(searchQuery: String? = null): CachedFood? {
         val name = description ?: return null
         if (name.isBlank()) return null
 
@@ -87,25 +87,25 @@ class FoodRepository @Inject constructor(
             ?.associate { it.nutrientNumber!! to it.value!! }
             ?: emptyMap()
 
-        val rawCalories = nutrientMap["208"] ?: 0f
-        val rawProtein = nutrientMap["203"] ?: 0f
-        val rawCarbs = nutrientMap["205"] ?: 0f
-        val rawFat = nutrientMap["204"] ?: 0f
+        val calories = nutrientMap["208"] ?: 0f
+        val protein = nutrientMap["203"] ?: 0f
+        val carbs = nutrientMap["205"] ?: 0f
+        val fat = nutrientMap["204"] ?: 0f
 
-        // Branded data nutrients are per serving — normalize to per 100g
+        // FDA search API returns nutrient values already per 100g
         val servingG = servingSize?.takeIf { it > 0f }
-        val factor = if (servingG != null) 100f / servingG else 1f
 
         return CachedFood(
             barcode = fdcId.toString(),
             name = formatFdaName(name, brandOwner),
-            calories = (rawCalories * factor).toInt(),
-            proteinG = rawProtein * factor,
-            carbsG = rawCarbs * factor,
-            fatG = rawFat * factor,
+            calories = calories.toInt(),
+            proteinG = protein,
+            carbsG = carbs,
+            fatG = fat,
             servingSizeG = servingG,
             servingSizeLabel = buildFdaServingLabel(),
             imageUrl = null,
+            searchQuery = searchQuery,
             lastAccessed = Instant.now()
         )
     }

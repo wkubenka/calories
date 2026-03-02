@@ -15,5 +15,6 @@ data class CachedFood(
     val servingSizeG: Float?,
     val servingSizeLabel: String? = null,
     val imageUrl: String?,
+    val searchQuery: String? = null,
     val lastAccessed: Instant
 )

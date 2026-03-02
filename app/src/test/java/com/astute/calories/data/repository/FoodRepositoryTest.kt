@@ -105,7 +105,7 @@ class FoodRepositoryTest {
                     servingSize = 120f,
                     servingSizeUnit = "g",
                     householdServing = "1 medium (120g)",
-                    nutrients = nutrients(107f, 1.3f, 27.6f, 0.4f)
+                    nutrients = nutrients(89f, 1.1f, 23f, 0.3f)
                 )
             ),
             totalHits = 1, currentPage = 1, totalPages = 1
@@ -117,14 +117,14 @@ class FoodRepositoryTest {
         val foods = (result as SearchResult.Success).foods
         assertEquals(1, foods.size)
         assertEquals("Banana (Chiquita)", foods[0].name)
-        // 107 kcal per 120g serving -> 107 * (100/120) = 89
+        // FDA search returns nutrients already per 100g
         assertEquals(89, foods[0].calories)
         assertEquals("789", foods[0].barcode)
         coVerify { dao.upsertAll(any()) }
     }
 
     @Test
-    fun `searchFoods normalizes per-serving nutrients to per 100g`() = runTest {
+    fun `searchFoods uses per-100g nutrient values directly`() = runTest {
         coEvery { dao.searchByName("cheese") } returns emptyList()
         coEvery { fdaApi.searchFoods(fdaApiKey, "cheese") } returns FdaSearchResponse(
             foods = listOf(
@@ -134,7 +134,7 @@ class FoodRepositoryTest {
                     servingSize = 28f,
                     servingSizeUnit = "g",
                     householdServing = "1 oz",
-                    nutrients = nutrients(110f, 7f, 1f, 9f)
+                    nutrients = nutrients(403f, 25f, 1.3f, 33f)
                 )
             ),
             totalHits = 1, currentPage = 1, totalPages = 1
@@ -142,8 +142,8 @@ class FoodRepositoryTest {
 
         val result = repository.searchFoods("cheese") as SearchResult.Success
         val food = result.foods[0]
-        // 110 kcal per 28g -> 110 * (100/28) = 392
-        assertEquals(392, food.calories)
+        // FDA search returns nutrients already per 100g — no conversion needed
+        assertEquals(403, food.calories)
         assertEquals(25f, food.proteinG)
         assertEquals(28f, food.servingSizeG)
         assertEquals("1 oz", food.servingSizeLabel)
@@ -166,7 +166,7 @@ class FoodRepositoryTest {
 
         val result = repository.searchFoods("generic") as SearchResult.Success
         val food = result.foods[0]
-        // No serving size → factor = 1, stored as-is
+        // Nutrients are per 100g regardless of serving size
         assertEquals(100, food.calories)
         assertNull(food.servingSizeG)
     }
