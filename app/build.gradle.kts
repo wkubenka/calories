@@ -89,6 +89,13 @@ dependencies {
     // DataStore
     implementation(libs.datastore.preferences)
 
+    // CameraX + ML Kit
+    implementation(libs.camerax.core)
+    implementation(libs.camerax.camera2)
+    implementation(libs.camerax.lifecycle)
+    implementation(libs.camerax.view)
+    implementation(libs.mlkit.barcode)
+
     // Coroutines
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
