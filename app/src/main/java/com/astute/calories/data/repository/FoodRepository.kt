@@ -69,6 +69,7 @@ class FoodRepository @Inject constructor(
             carbsG = nutriments?.carbohydrates100g ?: 0f,
             fatG = nutriments?.fat100g ?: 0f,
             servingSizeG = servingSize?.filter { it.isDigit() || it == '.' }?.toFloatOrNull(),
+            servingSizeLabel = servingSize?.trim()?.takeIf { it.isNotBlank() },
             imageUrl = imageUrl,
             lastAccessed = Instant.now()
         )

@@ -11,12 +11,9 @@ import com.astute.calories.data.repository.SearchResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.mapLatest
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
@@ -38,33 +35,42 @@ class FoodSearchViewModel @Inject constructor(
 
     private val _query = MutableStateFlow("")
 
-    val uiState: StateFlow<FoodSearchUiState> = _query
-        .debounce(350)
-        .distinctUntilChanged()
-        .mapLatest { query ->
-            if (query.length < 2) {
-                FoodSearchUiState(query = query)
-            } else {
-                when (val result = foodRepository.searchFoods(query)) {
-                    is SearchResult.Success -> FoodSearchUiState(
-                        query = query,
-                        results = result.foods
-                    )
-                    is SearchResult.Error -> FoodSearchUiState(
-                        query = query,
-                        errorMessage = result.message
-                    )
+    private val _uiState = MutableStateFlow(FoodSearchUiState())
+    val uiState: StateFlow<FoodSearchUiState> = _uiState
+
+    init {
+        viewModelScope.launch {
+            _query
+                .debounce(350)
+                .distinctUntilChanged()
+                .collect { query ->
+                    if (query.length < 2) {
+                        _uiState.value = _uiState.value.copy(
+                            results = emptyList(),
+                            isLoading = false,
+                            errorMessage = null
+                        )
+                    } else {
+                        _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+                        val newState = when (val result = foodRepository.searchFoods(query)) {
+                            is SearchResult.Success -> _uiState.value.copy(
+                                results = result.foods,
+                                isLoading = false
+                            )
+                            is SearchResult.Error -> _uiState.value.copy(
+                                errorMessage = result.message,
+                                isLoading = false
+                            )
+                        }
+                        _uiState.value = newState
+                    }
                 }
-            }
         }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = FoodSearchUiState()
-        )
+    }
 
     fun onQueryChanged(query: String) {
         _query.value = query
+        _uiState.value = _uiState.value.copy(query = query)
     }
 
     fun addFoodToLog(

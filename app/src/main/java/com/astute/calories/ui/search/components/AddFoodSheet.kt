@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.dp
 import com.astute.calories.data.local.entity.CachedFood
 import com.astute.calories.data.local.entity.MealCategory
 
+private enum class ServingMode { PER_SERVING, PER_100G }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddFoodSheet(
@@ -36,15 +38,20 @@ fun AddFoodSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    var servingSize by rememberSaveable {
-        mutableStateOf(food.servingSizeG?.toString() ?: "100")
+    val hasServing = food.servingSizeG != null && food.servingSizeG > 0f
+    var servingMode by rememberSaveable {
+        mutableStateOf(if (hasServing) ServingMode.PER_SERVING else ServingMode.PER_100G)
     }
     var quantity by rememberSaveable { mutableStateOf("1") }
+    var customGrams by rememberSaveable { mutableStateOf("100") }
     var selectedCategory by rememberSaveable { mutableStateOf(MealCategory.SNACKS) }
 
-    val servingG = servingSize.toFloatOrNull() ?: 100f
     val qty = quantity.toFloatOrNull() ?: 1f
-    val estimatedCals = ((food.calories * servingG * qty) / 100f).toInt()
+    val effectiveGrams = when (servingMode) {
+        ServingMode.PER_SERVING -> (food.servingSizeG ?: 100f) * qty
+        ServingMode.PER_100G -> (customGrams.toFloatOrNull() ?: 100f) * qty
+    }
+    val estimatedCals = ((food.calories * effectiveGrams) / 100f).toInt()
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -68,22 +75,52 @@ fun AddFoodSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Serving mode selector
+            if (hasServing) {
+                Text(text = "Portion", style = MaterialTheme.typography.labelLarge)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val servingLabel = food.servingSizeLabel ?: "${food.servingSizeG?.toInt()}g"
+                    FilterChip(
+                        selected = servingMode == ServingMode.PER_SERVING,
+                        onClick = { servingMode = ServingMode.PER_SERVING },
+                        label = { Text(servingLabel) }
+                    )
+                    FilterChip(
+                        selected = servingMode == ServingMode.PER_100G,
+                        onClick = { servingMode = ServingMode.PER_100G },
+                        label = { Text("Custom (g)") }
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                OutlinedTextField(
-                    value = servingSize,
-                    onValueChange = { servingSize = it.filter { c -> c.isDigit() || c == '.' } },
-                    label = { Text("Serving (g)") },
-                    modifier = Modifier.weight(1f),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    singleLine = true
-                )
+                if (servingMode == ServingMode.PER_100G) {
+                    OutlinedTextField(
+                        value = customGrams,
+                        onValueChange = { customGrams = it.filter { c -> c.isDigit() || c == '.' } },
+                        label = { Text("Grams") },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true
+                    )
+                }
                 OutlinedTextField(
                     value = quantity,
                     onValueChange = { quantity = it.filter { c -> c.isDigit() || c == '.' } },
-                    label = { Text("Qty") },
+                    label = {
+                        Text(
+                            if (servingMode == ServingMode.PER_SERVING) "Servings"
+                            else "Qty"
+                        )
+                    },
                     modifier = Modifier.weight(1f),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true
@@ -118,9 +155,14 @@ fun AddFoodSheet(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            val servingSizeForLog = when (servingMode) {
+                ServingMode.PER_SERVING -> food.servingSizeG ?: 100f
+                ServingMode.PER_100G -> customGrams.toFloatOrNull() ?: 100f
+            }
+
             Button(
                 onClick = {
-                    onConfirm(servingG, qty, selectedCategory)
+                    onConfirm(servingSizeForLog, qty, selectedCategory)
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {

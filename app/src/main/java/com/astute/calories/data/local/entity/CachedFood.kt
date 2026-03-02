@@ -13,6 +13,7 @@ data class CachedFood(
     val carbsG: Float,
     val fatG: Float,
     val servingSizeG: Float?,
+    val servingSizeLabel: String? = null,
     val imageUrl: String?,
     val lastAccessed: Instant
 )
