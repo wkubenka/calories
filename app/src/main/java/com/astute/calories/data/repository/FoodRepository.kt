@@ -4,6 +4,7 @@ import com.astute.calories.data.local.dao.FoodCacheDao
 import com.astute.calories.data.local.entity.CachedFood
 import com.astute.calories.data.remote.OpenFoodFactsApi
 import com.astute.calories.data.remote.dto.ProductDto
+import retrofit2.HttpException
 import java.io.IOException
 import java.time.Instant
 import javax.inject.Inject
@@ -32,8 +33,10 @@ class FoodRepository @Inject constructor(
                 ?: emptyList()
             if (foods.isNotEmpty()) foodCacheDao.upsertAll(foods)
             SearchResult.Success(foods)
+        } catch (e: HttpException) {
+            SearchResult.Error("Server error (${e.code()}). Please try again.")
         } catch (e: IOException) {
-            SearchResult.Error("No internet connection. Check your network and try again.")
+            SearchResult.Error("Network error. Check your connection and try again.")
         } catch (_: Exception) {
             SearchResult.Error("Something went wrong. Please try again.")
         }

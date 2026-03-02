@@ -35,6 +35,12 @@ object NetworkModule {
 
         return OkHttpClient.Builder()
             .cache(cache)
+            .addInterceptor { chain ->
+                val request = chain.request().newBuilder()
+                    .header("User-Agent", "AstuteCalories/1.0 (Android; contact@astute-apps.com)")
+                    .build()
+                chain.proceed(request)
+            }
             .addInterceptor(
                 HttpLoggingInterceptor().apply {
                     level = HttpLoggingInterceptor.Level.BASIC
