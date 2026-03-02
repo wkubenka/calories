@@ -1,11 +1,14 @@
 package com.astute.calories.di
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.room.Room
 import com.astute.calories.data.local.AppDatabase
 import com.astute.calories.data.local.dao.DailyLogDao
 import com.astute.calories.data.local.dao.FoodCacheDao
 import com.astute.calories.data.local.dao.SavedMealDao
+import com.astute.calories.data.local.dataStore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -25,6 +28,11 @@ object AppModule {
             AppDatabase::class.java,
             "calories_db"
         ).build()
+
+    @Provides
+    @Singleton
+    fun provideDataStore(@ApplicationContext context: Context): DataStore<Preferences> =
+        context.dataStore
 
     @Provides
     fun provideDailyLogDao(db: AppDatabase): DailyLogDao = db.dailyLogDao()

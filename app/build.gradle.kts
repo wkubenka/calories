@@ -86,6 +86,9 @@ dependencies {
     // Image Loading
     implementation(libs.coil.compose)
 
+    // DataStore
+    implementation(libs.datastore.preferences)
+
     // Coroutines
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
