@@ -2,6 +2,7 @@ package com.astute.calories.ui.home
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -11,10 +12,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -68,8 +72,19 @@ fun HomeScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showManualEntry = true }) {
-                Icon(Icons.Default.Add, contentDescription = "Quick add")
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                FloatingActionButton(onClick = { showManualEntry = true }) {
+                    Icon(Icons.Default.Add, contentDescription = "Quick add")
+                }
+                SmallFloatingActionButton(onClick = onNavigateToSearch) {
+                    Icon(Icons.Default.Search, contentDescription = "Search foods")
+                }
+                SmallFloatingActionButton(onClick = onNavigateToScanner) {
+                    Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan barcode")
+                }
             }
         }
     ) { padding ->
