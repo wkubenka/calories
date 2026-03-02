@@ -1,0 +1,23 @@
+package com.astute.calories.data.local
+
+import androidx.room.Database
+import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
+import com.astute.calories.data.local.dao.DailyLogDao
+import com.astute.calories.data.local.dao.FoodCacheDao
+import com.astute.calories.data.local.dao.SavedMealDao
+import com.astute.calories.data.local.entity.CachedFood
+import com.astute.calories.data.local.entity.LogEntry
+import com.astute.calories.data.local.entity.SavedMeal
+
+@Database(
+    entities = [LogEntry::class, CachedFood::class, SavedMeal::class],
+    version = 1,
+    exportSchema = false
+)
+@TypeConverters(Converters::class)
+abstract class AppDatabase : RoomDatabase() {
+    abstract fun dailyLogDao(): DailyLogDao
+    abstract fun foodCacheDao(): FoodCacheDao
+    abstract fun savedMealDao(): SavedMealDao
+}
