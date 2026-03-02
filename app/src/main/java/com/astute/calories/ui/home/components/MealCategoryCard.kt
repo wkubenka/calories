@@ -10,13 +10,18 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,16 +33,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.astute.calories.data.local.entity.LogEntry
 import com.astute.calories.data.local.entity.MealCategory
+import com.astute.calories.data.local.entity.SavedMeal
 
 @Composable
 fun MealCategoryCard(
     category: MealCategory,
     entries: List<LogEntry>,
+    savedMeals: List<SavedMeal>,
     onRemoveEntry: (LogEntry) -> Unit,
     onEditEntry: (LogEntry) -> Unit,
+    onSaveMeal: (MealCategory) -> Unit,
+    onLoadSavedMeal: (SavedMeal) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var expanded by rememberSaveable { mutableStateOf(true) }
+    var showLoadMenu by rememberSaveable { mutableStateOf(false) }
     val totalCals = entries.sumOf { it.calories }
 
     Card(
@@ -52,7 +62,7 @@ fun MealCategoryCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { expanded = !expanded }
-                    .padding(16.dp),
+                    .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -67,6 +77,17 @@ fun MealCategoryCard(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+
+                    if (entries.isNotEmpty()) {
+                        IconButton(onClick = { onSaveMeal(category) }) {
+                            Icon(
+                                Icons.Default.Star,
+                                contentDescription = "Save meal",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
                     Icon(
                         imageVector = if (expanded) Icons.Default.KeyboardArrowUp
                         else Icons.Default.KeyboardArrowDown,
@@ -88,6 +109,29 @@ fun MealCategoryCard(
                             onRemove = { onRemoveEntry(entry) },
                             onTap = { onEditEntry(entry) }
                         )
+                    }
+
+                    // Load saved meal button
+                    if (savedMeals.isNotEmpty()) {
+                        Row(modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)) {
+                            TextButton(onClick = { showLoadMenu = true }) {
+                                Text("Load saved meal")
+                            }
+                            DropdownMenu(
+                                expanded = showLoadMenu,
+                                onDismissRequest = { showLoadMenu = false }
+                            ) {
+                                savedMeals.forEach { meal ->
+                                    DropdownMenuItem(
+                                        text = { Text(meal.name) },
+                                        onClick = {
+                                            onLoadSavedMeal(meal)
+                                            showLoadMenu = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }

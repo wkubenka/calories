@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.astute.calories.data.local.UserPreferences
 import com.astute.calories.data.local.entity.LogEntry
 import com.astute.calories.data.local.entity.MealCategory
+import com.astute.calories.data.local.entity.SavedMeal
 import com.astute.calories.data.repository.DailyLogRepository
+import com.astute.calories.data.repository.SavedMealRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -24,12 +26,14 @@ data class HomeUiState(
     val totalProtein: Float = 0f,
     val totalCarbs: Float = 0f,
     val totalFat: Float = 0f,
-    val entriesByCategory: Map<MealCategory, List<LogEntry>> = emptyMap()
+    val entriesByCategory: Map<MealCategory, List<LogEntry>> = emptyMap(),
+    val savedMealsByCategory: Map<MealCategory, List<SavedMeal>> = emptyMap()
 )
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val dailyLogRepository: DailyLogRepository,
+    private val savedMealRepository: SavedMealRepository,
     private val userPreferences: UserPreferences
 ) : ViewModel() {
 
@@ -38,9 +42,11 @@ class HomeViewModel @Inject constructor(
     val uiState: StateFlow<HomeUiState> = combine(
         today,
         dailyLogRepository.getEntriesForDate(LocalDate.now()),
-        userPreferences.calorieGoal
-    ) { date, entries, goal ->
+        userPreferences.calorieGoal,
+        savedMealRepository.getAll()
+    ) { date, entries, goal, savedMeals ->
         val grouped = entries.groupBy { it.mealCategory }
+        val savedGrouped = savedMeals.groupBy { it.category }
         HomeUiState(
             date = date,
             calorieGoal = goal,
@@ -48,7 +54,8 @@ class HomeViewModel @Inject constructor(
             totalProtein = entries.sumOf { it.proteinG.toDouble() }.toFloat(),
             totalCarbs = entries.sumOf { it.carbsG.toDouble() }.toFloat(),
             totalFat = entries.sumOf { it.fatG.toDouble() }.toFloat(),
-            entriesByCategory = grouped
+            entriesByCategory = grouped,
+            savedMealsByCategory = savedGrouped
         )
     }.stateIn(
         scope = viewModelScope,
@@ -91,6 +98,33 @@ class HomeViewModel @Inject constructor(
     fun removeEntry(entry: LogEntry) {
         viewModelScope.launch {
             dailyLogRepository.removeEntry(entry)
+        }
+    }
+
+    fun saveCurrentMeal(category: MealCategory, name: String) {
+        viewModelScope.launch {
+            val entries = uiState.value.entriesByCategory[category] ?: return@launch
+            if (entries.isEmpty()) return@launch
+            val items = savedMealRepository.logEntriesToSavedItems(entries)
+            savedMealRepository.save(
+                SavedMeal(
+                    name = name,
+                    category = category,
+                    itemsJson = savedMealRepository.toJson(items)
+                )
+            )
+        }
+    }
+
+    fun loadSavedMeal(meal: SavedMeal) {
+        viewModelScope.launch {
+            val items = savedMealRepository.parseItems(meal.itemsJson)
+            val entries = savedMealRepository.savedItemsToLogEntries(
+                items = items,
+                category = meal.category,
+                date = LocalDate.now()
+            )
+            entries.forEach { dailyLogRepository.addEntry(it) }
         }
     }
 }
