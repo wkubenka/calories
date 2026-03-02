@@ -37,6 +37,7 @@ class FoodRepository @Inject constructor(
         return try {
             val response = fdaApi.searchFoods(apiKey = fdaApiKey, query = query)
             val foods = response.foods
+                ?.sortedBy { if (it.dataType == "Branded") 1 else 0 }
                 ?.mapNotNull { it.toCachedFood(query) }
                 ?: emptyList()
             if (foods.isNotEmpty()) foodCacheDao.upsertAll(foods)

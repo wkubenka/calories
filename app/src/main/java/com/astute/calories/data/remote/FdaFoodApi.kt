@@ -11,6 +11,6 @@ interface FdaFoodApi {
         @Query("api_key") apiKey: String,
         @Query("query") query: String,
         @Query("pageSize") pageSize: Int = 10,
-        @Query("dataType") dataType: String = "Branded"
+        @Query("dataType") dataType: String = "Foundation,SR Legacy,Branded"
     ): FdaSearchResponse
 }
