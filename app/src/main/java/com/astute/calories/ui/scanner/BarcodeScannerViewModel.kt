@@ -35,7 +35,8 @@ class BarcodeScannerViewModel @Inject constructor(
     private var lastScannedBarcode: String? = null
 
     fun onBarcodeDetected(barcode: String) {
-        if (barcode == lastScannedBarcode) return
+        val current = _scanResult.value
+        if (current is ScanResult.Loading || current is ScanResult.Found) return
         lastScannedBarcode = barcode
 
         viewModelScope.launch {
