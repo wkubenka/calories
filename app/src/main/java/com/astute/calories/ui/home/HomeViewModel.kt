@@ -102,21 +102,6 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun saveCurrentMeal(category: MealCategory, name: String) {
-        viewModelScope.launch {
-            val entries = uiState.value.entriesByCategory[category] ?: return@launch
-            if (entries.isEmpty()) return@launch
-            val items = savedMealRepository.logEntriesToSavedItems(entries)
-            savedMealRepository.save(
-                SavedMeal(
-                    name = name,
-                    category = category,
-                    itemsJson = savedMealRepository.toJson(items)
-                )
-            )
-        }
-    }
-
     fun loadSavedMeal(meal: SavedMeal) {
         viewModelScope.launch {
             val items = savedMealRepository.parseItems(meal.itemsJson)

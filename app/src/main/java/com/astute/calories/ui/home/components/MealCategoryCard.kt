@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Card
@@ -42,7 +41,6 @@ fun MealCategoryCard(
     savedMeals: List<SavedMeal>,
     onRemoveEntry: (LogEntry) -> Unit,
     onEditEntry: (LogEntry) -> Unit,
-    onSaveMeal: (MealCategory) -> Unit,
     onLoadSavedMeal: (SavedMeal) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -77,16 +75,6 @@ fun MealCategoryCard(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-
-                    if (entries.isNotEmpty()) {
-                        IconButton(onClick = { onSaveMeal(category) }) {
-                            Icon(
-                                Icons.Default.Star,
-                                contentDescription = "Save meal",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
 
                     Icon(
                         imageVector = if (expanded) Icons.Default.KeyboardArrowUp

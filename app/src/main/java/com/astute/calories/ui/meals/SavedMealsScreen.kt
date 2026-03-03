@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -25,6 +26,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -54,7 +56,9 @@ fun SavedMealsScreen(
     viewModel: SavedMealsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val todayEntries by viewModel.todayEntriesByCategory.collectAsStateWithLifecycle()
     var editingMeal by rememberSaveable { mutableStateOf<SavedMeal?>(null) }
+    var showSaveDialog by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -66,6 +70,13 @@ fun SavedMealsScreen(
                     }
                 }
             )
+        },
+        floatingActionButton = {
+            if (todayEntries.values.any { it.isNotEmpty() }) {
+                FloatingActionButton(onClick = { showSaveDialog = true }) {
+                    Icon(Icons.Default.Add, contentDescription = "Save meal from today")
+                }
+            }
         }
     ) { padding ->
         if (uiState.mealsByCategory.isEmpty()) {
@@ -76,7 +87,7 @@ fun SavedMealsScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    "No saved meals yet.\nSave a meal from the home screen.",
+                    "No saved meals yet.\nTap + to save today's meals.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -217,6 +228,70 @@ fun SavedMealsScreen(
             dismissButton = {
                 TextButton(onClick = { editingMeal = null }) {
                     Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Save meal from today's log
+    if (showSaveDialog) {
+        var selectedCategory by rememberSaveable { mutableStateOf<MealCategory?>(null) }
+        var mealName by rememberSaveable { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = {
+                showSaveDialog = false
+                selectedCategory = null
+                mealName = ""
+            },
+            title = { Text(if (selectedCategory == null) "Save Meal" else "Name This Meal") },
+            text = {
+                Column {
+                    if (selectedCategory == null) {
+                        Text("Choose a meal to save:", style = MaterialTheme.typography.bodyMedium)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        MealCategory.entries.forEach { category ->
+                            val entries = todayEntries[category]
+                            if (!entries.isNullOrEmpty()) {
+                                TextButton(onClick = { selectedCategory = category }) {
+                                    Text("${category.name.lowercase().replaceFirstChar { it.uppercase() }} (${entries.size} items)")
+                                }
+                            }
+                        }
+                    } else {
+                        OutlinedTextField(
+                            value = mealName,
+                            onValueChange = { mealName = it },
+                            label = { Text("Meal name") },
+                            singleLine = true
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                if (selectedCategory != null) {
+                    TextButton(
+                        onClick = {
+                            if (mealName.isNotBlank()) {
+                                viewModel.saveCurrentMeal(selectedCategory!!, mealName.trim())
+                                showSaveDialog = false
+                                selectedCategory = null
+                                mealName = ""
+                            }
+                        }
+                    ) { Text("Save") }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    if (selectedCategory != null) {
+                        selectedCategory = null
+                        mealName = ""
+                    } else {
+                        showSaveDialog = false
+                    }
+                }) {
+                    Text(if (selectedCategory != null) "Back" else "Cancel")
                 }
             }
         )

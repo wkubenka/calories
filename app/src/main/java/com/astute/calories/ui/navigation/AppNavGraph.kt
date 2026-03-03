@@ -25,7 +25,6 @@ fun AppNavGraph(navController: NavHostController) {
             HomeScreen(
                 onNavigateToSearch = { navController.navigate(Routes.FOOD_SEARCH) },
                 onNavigateToScanner = { navController.navigate(Routes.BARCODE_SCANNER) },
-                onNavigateToSavedMeals = { navController.navigate(Routes.SAVED_MEALS) },
                 onNavigateToSettings = { navController.navigate(Routes.SETTINGS) }
             )
         }
@@ -39,7 +38,10 @@ fun AppNavGraph(navController: NavHostController) {
             SavedMealsScreen(onNavigateBack = { navController.popBackStack() })
         }
         composable(Routes.SETTINGS) {
-            SettingsScreen(onNavigateBack = { navController.popBackStack() })
+            SettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToSavedMeals = { navController.navigate(Routes.SAVED_MEALS) }
+            )
         }
     }
 }
