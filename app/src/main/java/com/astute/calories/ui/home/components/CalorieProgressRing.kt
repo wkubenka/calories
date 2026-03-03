@@ -76,7 +76,7 @@ fun CalorieProgressRing(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "/ $goal kcal",
+                text = "/ $goal Cal",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

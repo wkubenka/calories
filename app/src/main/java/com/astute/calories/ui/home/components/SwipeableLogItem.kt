@@ -73,7 +73,7 @@ fun SwipeableLogItem(
                 modifier = Modifier.weight(1f)
             )
             Text(
-                text = "${entry.calories} kcal",
+                text = "${entry.calories} Cal",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

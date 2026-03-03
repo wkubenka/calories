@@ -71,7 +71,7 @@ fun MealCategoryCard(
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "$totalCals kcal",
+                        text = "$totalCals Cal",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

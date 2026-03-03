@@ -68,7 +68,7 @@ fun AddFoodSheet(
                 style = MaterialTheme.typography.titleLarge
             )
             Text(
-                text = "${food.calories} kcal / 100g",
+                text = "${food.calories} Cal / 100g",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -130,7 +130,7 @@ fun AddFoodSheet(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Estimated: $estimatedCals kcal",
+                text = "Estimated: $estimatedCals Cal",
                 style = MaterialTheme.typography.titleMedium
             )
 

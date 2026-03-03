@@ -142,7 +142,7 @@ fun SavedMealsScreen(
                                             )
                                             val totalCals = mealWithItems.items.sumOf { it.calories }
                                             Text(
-                                                text = "${mealWithItems.items.size} items  •  $totalCals kcal",
+                                                text = "${mealWithItems.items.size} items  •  $totalCals Cal",
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
@@ -182,7 +182,7 @@ fun SavedMealsScreen(
                                                         modifier = Modifier.weight(1f)
                                                     )
                                                     Text(
-                                                        text = "${item.calories} kcal",
+                                                        text = "${item.calories} Cal",
                                                         style = MaterialTheme.typography.bodySmall,
                                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                                     )
