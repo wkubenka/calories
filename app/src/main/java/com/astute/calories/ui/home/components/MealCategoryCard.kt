@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -92,11 +93,13 @@ fun MealCategoryCard(
             ) {
                 Column {
                     entries.forEach { entry ->
-                        SwipeableLogItem(
-                            entry = entry,
-                            onRemove = { onRemoveEntry(entry) },
-                            onTap = { onEditEntry(entry) }
-                        )
+                        key(entry.id) {
+                            SwipeableLogItem(
+                                entry = entry,
+                                onRemove = { onRemoveEntry(entry) },
+                                onTap = { onEditEntry(entry) }
+                            )
+                        }
                     }
 
                     // Load saved meal button

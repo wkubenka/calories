@@ -15,6 +15,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -114,8 +116,28 @@ fun HomeScreen(
             }
 
             item {
-                TextButton(onClick = { viewModel.copyYesterday() }) {
-                    Text("Copy yesterday's meals")
+                var showCopyMenu by rememberSaveable { mutableStateOf(false) }
+                Box {
+                    TextButton(onClick = { showCopyMenu = true }) {
+                        Text("Copy yesterday's meals")
+                    }
+                    DropdownMenu(
+                        expanded = showCopyMenu,
+                        onDismissRequest = { showCopyMenu = false }
+                    ) {
+                        MealCategory.entries.forEach { category ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(category.name.lowercase()
+                                        .replaceFirstChar { it.uppercase() })
+                                },
+                                onClick = {
+                                    viewModel.copyYesterday(category)
+                                    showCopyMenu = false
+                                }
+                            )
+                        }
+                    }
                 }
             }
 

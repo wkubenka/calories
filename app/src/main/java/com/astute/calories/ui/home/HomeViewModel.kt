@@ -114,11 +114,11 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun copyYesterday() {
+    fun copyYesterday(category: MealCategory) {
         viewModelScope.launch {
             val yesterday = LocalDate.now().minusDays(1)
             val entries = dailyLogRepository.getEntriesForDate(yesterday).first()
-            entries.forEach { entry ->
+            entries.filter { it.mealCategory == category }.forEach { entry ->
                 dailyLogRepository.addEntry(
                     entry.copy(
                         id = 0,
