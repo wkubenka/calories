@@ -17,14 +17,17 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.astute.calories.data.local.entity.LogEntry
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,8 +38,21 @@ fun ServingSizeSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
+    val baseQuantity = remember(entry) { if (entry.quantity > 0f) entry.quantity else 1f }
+    val caloriesPerUnit = remember(entry) { entry.calories.toFloat() / baseQuantity }
+    val proteinPerUnit = remember(entry) { entry.proteinG / baseQuantity }
+    val carbsPerUnit = remember(entry) { entry.carbsG / baseQuantity }
+    val fatPerUnit = remember(entry) { entry.fatG / baseQuantity }
+
     var quantity by rememberSaveable { mutableStateOf(entry.quantity.toString()) }
     var calories by rememberSaveable { mutableStateOf(entry.calories.toString()) }
+
+    LaunchedEffect(quantity) {
+        val qty = quantity.toFloatOrNull()
+        if (qty != null && qty > 0f) {
+            calories = (caloriesPerUnit * qty).roundToInt().toString()
+        }
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -94,7 +110,10 @@ fun ServingSizeSheet(
                         onConfirm(
                             entry.copy(
                                 quantity = newQuantity,
-                                calories = newCalories
+                                calories = newCalories,
+                                proteinG = proteinPerUnit * newQuantity,
+                                carbsG = carbsPerUnit * newQuantity,
+                                fatG = fatPerUnit * newQuantity
                             )
                         )
                     },
