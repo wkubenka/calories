@@ -1,5 +1,6 @@
 package com.astute.calories.ui.entry
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -27,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.astute.calories.data.local.entity.LogEntry
+import com.astute.calories.data.local.entity.MealCategory
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,6 +49,7 @@ fun ServingSizeSheet(
 
     var quantity by rememberSaveable { mutableStateOf(entry.quantity.toString()) }
     var calories by rememberSaveable { mutableStateOf(entry.calories.toString()) }
+    var selectedCategory by rememberSaveable { mutableStateOf(entry.mealCategory) }
 
     LaunchedEffect(quantity) {
         val qty = quantity.toFloatOrNull()
@@ -91,6 +95,28 @@ fun ServingSizeSheet(
                 singleLine = true
             )
 
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Meal",
+                style = MaterialTheme.typography.labelLarge
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                MealCategory.entries.forEach { category ->
+                    FilterChip(
+                        selected = selectedCategory == category,
+                        onClick = { selectedCategory = category },
+                        label = { Text(category.name.lowercase().replaceFirstChar { it.uppercase() }) }
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(24.dp))
 
             Row(modifier = Modifier.fillMaxWidth()) {
@@ -109,6 +135,7 @@ fun ServingSizeSheet(
                         val newCalories = calories.toIntOrNull() ?: entry.calories
                         onConfirm(
                             entry.copy(
+                                mealCategory = selectedCategory,
                                 quantity = newQuantity,
                                 calories = newCalories,
                                 proteinG = proteinPerUnit * newQuantity,
