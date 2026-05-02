@@ -51,6 +51,7 @@ android {
 
     testOptions {
         unitTests.isReturnDefaultValues = true
+        unitTests.isIncludeAndroidResources = true
     }
 
     compileOptions {
@@ -133,6 +134,10 @@ dependencies {
     // Testing
     testImplementation(libs.junit5.api)
     testRuntimeOnly(libs.junit5.engine)
+    testImplementation(libs.junit4)
+    testRuntimeOnly(libs.junit.vintage.engine)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
     testImplementation(libs.mockk)
     testImplementation(libs.turbine)
     testImplementation(libs.coroutines.test)
