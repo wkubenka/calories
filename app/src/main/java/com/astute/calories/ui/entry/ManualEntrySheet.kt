@@ -91,9 +91,9 @@ fun ManualEntrySheet(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedTextField(
-                    value = protein,
-                    onValueChange = { protein = it.filter { c -> c.isDigit() || c == '.' } },
-                    label = { Text("Protein (g)") },
+                    value = fat,
+                    onValueChange = { fat = it.filter { c -> c.isDigit() || c == '.' } },
+                    label = { Text("Fat (g)") },
                     modifier = Modifier.weight(1f),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true
@@ -107,9 +107,9 @@ fun ManualEntrySheet(
                     singleLine = true
                 )
                 OutlinedTextField(
-                    value = fat,
-                    onValueChange = { fat = it.filter { c -> c.isDigit() || c == '.' } },
-                    label = { Text("Fat (g)") },
+                    value = protein,
+                    onValueChange = { protein = it.filter { c -> c.isDigit() || c == '.' } },
+                    label = { Text("Protein (g)") },
                     modifier = Modifier.weight(1f),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true

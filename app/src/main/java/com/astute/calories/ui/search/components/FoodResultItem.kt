@@ -54,7 +54,7 @@ fun FoodResultItem(
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = "${food.calories} Cal/100g  •  P ${food.proteinG.toInt()}g  C ${food.carbsG.toInt()}g  F ${food.fatG.toInt()}g",
+                text = "${food.calories} Cal/100g  •  F ${food.fatG.toInt()}g  C ${food.carbsG.toInt()}g  P ${food.proteinG.toInt()}g",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

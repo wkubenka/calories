@@ -24,9 +24,9 @@ fun MacroSummary(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        MacroItem(label = "Protein", grams = proteinG)
-        MacroItem(label = "Carbs", grams = carbsG)
         MacroItem(label = "Fat", grams = fatG)
+        MacroItem(label = "Carbs", grams = carbsG)
+        MacroItem(label = "Protein", grams = proteinG)
     }
 }
 
