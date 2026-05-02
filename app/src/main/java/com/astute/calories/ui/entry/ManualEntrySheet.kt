@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.astute.calories.data.local.entity.MealCategory
+import com.astute.calories.util.defaultMealCategory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,7 +47,7 @@ fun ManualEntrySheet(
     var protein by rememberSaveable { mutableStateOf("") }
     var carbs by rememberSaveable { mutableStateOf("") }
     var fat by rememberSaveable { mutableStateOf("") }
-    var selectedCategory by rememberSaveable { mutableStateOf(MealCategory.SNACKS) }
+    var selectedCategory by rememberSaveable { mutableStateOf(defaultMealCategory()) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,

@@ -26,6 +26,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.astute.calories.data.local.entity.CachedFood
 import com.astute.calories.data.local.entity.MealCategory
+import com.astute.calories.util.defaultMealCategory
 
 private enum class ServingMode { PER_SERVING, PER_100G }
 
@@ -44,7 +45,7 @@ fun AddFoodSheet(
     }
     var quantity by rememberSaveable { mutableStateOf("1") }
     var customGrams by rememberSaveable { mutableStateOf("100") }
-    var selectedCategory by rememberSaveable { mutableStateOf(MealCategory.SNACKS) }
+    var selectedCategory by rememberSaveable { mutableStateOf(defaultMealCategory()) }
 
     val qty = quantity.toFloatOrNull() ?: 1f
     val effectiveGrams = when (servingMode) {
