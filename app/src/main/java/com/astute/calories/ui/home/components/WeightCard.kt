@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -20,6 +19,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import com.astute.calories.data.local.entity.WeightEntry
+import java.util.Locale
 
 @Composable
 fun WeightCard(
@@ -41,7 +41,7 @@ fun WeightCard(
             )
             Text(
                 text = todayWeight
-                    ?.let { "%.1f lbs".format(it.weightLbs) }
+                    ?.let { "%.1f lbs".format(Locale.US, it.weightLbs) }
                     ?: "Log today's weight",
                 style = MaterialTheme.typography.titleLarge
             )
@@ -67,7 +67,7 @@ private fun WeightLogDialog(
     onConfirm: (Float) -> Unit
 ) {
     var text by remember {
-        mutableStateOf(initialWeight?.let { "%.1f".format(it) } ?: "")
+        mutableStateOf(initialWeight?.let { "%.1f".format(Locale.US, it) } ?: "")
     }
     val parsed = text.trim().toFloatOrNull()
     val isValid = parsed != null && parsed > 0f
