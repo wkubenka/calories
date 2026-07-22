@@ -18,7 +18,9 @@ class DailyResetWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         val yesterday = LocalDate.now().minusDays(1)
-        // Delete anything older than yesterday
+        // Delete anything older than yesterday.
+        // NOTE: weight_entries is intentionally EXEMPT from the purge — weight is
+        // retained indefinitely so trends stay possible. Do not add weight cleanup here.
         dailyLogRepository.deleteEntriesBefore(yesterday)
         return Result.success()
     }
