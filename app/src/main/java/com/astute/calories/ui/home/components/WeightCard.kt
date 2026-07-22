@@ -3,6 +3,7 @@ package com.astute.calories.ui.home.components
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
@@ -16,7 +17,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import com.astute.calories.data.local.entity.WeightEntry
 import java.util.Locale
@@ -70,7 +70,9 @@ private fun WeightLogDialog(
         mutableStateOf(initialWeight?.let { "%.1f".format(Locale.US, it) } ?: "")
     }
     val parsed = text.trim().toFloatOrNull()
-    val isValid = parsed != null && parsed > 0f
+    // Guard against non-finite (Infinity/NaN slip through toFloatOrNull) and
+    // implausible values; 1500 lbs is well beyond any real bodyweight.
+    val isValid = parsed != null && parsed.isFinite() && parsed > 0f && parsed <= 1500f
 
     AlertDialog(
         onDismissRequest = onDismiss,
