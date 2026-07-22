@@ -5,8 +5,10 @@ import com.astute.calories.data.local.UserPreferences
 import com.astute.calories.data.local.entity.LogEntry
 import com.astute.calories.data.local.entity.MealCategory
 import com.astute.calories.data.local.entity.SavedMeal
+import com.astute.calories.data.local.entity.WeightEntry
 import com.astute.calories.data.repository.DailyLogRepository
 import com.astute.calories.data.repository.SavedMealRepository
+import com.astute.calories.data.repository.WeightRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -31,6 +33,7 @@ class HomeViewModelTest {
     private lateinit var dailyLogRepository: DailyLogRepository
     private lateinit var savedMealRepository: SavedMealRepository
     private lateinit var userPreferences: UserPreferences
+    private lateinit var weightRepository: WeightRepository
     private lateinit var viewModel: HomeViewModel
 
     private val testDispatcher = StandardTestDispatcher()
@@ -59,6 +62,8 @@ class HomeViewModelTest {
         every { dailyLogRepository.getEntriesForDate(any()) } returns flowOf(listOf(sampleEntry))
         every { userPreferences.calorieGoal } returns flowOf(2000)
         every { savedMealRepository.getAll() } returns flowOf(emptyList())
+        weightRepository = mockk(relaxed = true)
+        every { weightRepository.getForDate(any()) } returns flowOf(null)
     }
 
     @AfterEach
@@ -66,7 +71,8 @@ class HomeViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun createViewModel() = HomeViewModel(dailyLogRepository, savedMealRepository, userPreferences)
+    private fun createViewModel() =
+        HomeViewModel(dailyLogRepository, savedMealRepository, userPreferences, weightRepository)
 
     @Test
     fun `uiState computes totals from entries`() = runTest {
@@ -132,5 +138,37 @@ class HomeViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         coVerify { dailyLogRepository.updateEntry(updated) }
+    }
+
+    @Test
+    fun `uiState surfaces today's weight`() = runTest {
+        val entry = WeightEntry(
+            date = LocalDate.now(),
+            weightLbs = 178.4f,
+            recordedAt = Instant.now()
+        )
+        every { weightRepository.getForDate(any()) } returns flowOf(entry)
+        viewModel = createViewModel()
+
+        viewModel.uiState.test {
+            awaitItem() // skip initial
+            val state = awaitItem()
+            assertEquals(178.4f, state.todayWeight?.weightLbs)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `logWeight upserts entry for today`() = runTest {
+        viewModel = createViewModel()
+
+        viewModel.logWeight(176.2f)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify {
+            weightRepository.upsert(match {
+                it.date == LocalDate.now() && it.weightLbs == 176.2f
+            })
+        }
     }
 }
