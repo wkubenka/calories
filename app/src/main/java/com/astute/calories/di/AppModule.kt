@@ -8,6 +8,7 @@ import com.astute.calories.data.local.AppDatabase
 import com.astute.calories.data.local.dao.DailyLogDao
 import com.astute.calories.data.local.dao.FoodCacheDao
 import com.astute.calories.data.local.dao.SavedMealDao
+import com.astute.calories.data.local.dao.WeightDao
 import com.astute.calories.data.local.dataStore
 import dagger.Module
 import dagger.Provides
@@ -27,7 +28,11 @@ object AppModule {
             context,
             AppDatabase::class.java,
             "calories_db"
-        ).addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3).build()
+        ).addMigrations(
+            AppDatabase.MIGRATION_1_2,
+            AppDatabase.MIGRATION_2_3,
+            AppDatabase.MIGRATION_3_4
+        ).build()
 
     @Provides
     @Singleton
@@ -42,4 +47,7 @@ object AppModule {
 
     @Provides
     fun provideSavedMealDao(db: AppDatabase): SavedMealDao = db.savedMealDao()
+
+    @Provides
+    fun provideWeightDao(db: AppDatabase): WeightDao = db.weightDao()
 }

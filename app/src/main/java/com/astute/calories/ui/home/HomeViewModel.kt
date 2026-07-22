@@ -6,8 +6,10 @@ import com.astute.calories.data.local.UserPreferences
 import com.astute.calories.data.local.entity.LogEntry
 import com.astute.calories.data.local.entity.MealCategory
 import com.astute.calories.data.local.entity.SavedMeal
+import com.astute.calories.data.local.entity.WeightEntry
 import com.astute.calories.data.repository.DailyLogRepository
 import com.astute.calories.data.repository.SavedMealRepository
+import com.astute.calories.data.repository.WeightRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -28,14 +30,16 @@ data class HomeUiState(
     val totalCarbs: Float = 0f,
     val totalFat: Float = 0f,
     val entriesByCategory: Map<MealCategory, List<LogEntry>> = emptyMap(),
-    val savedMealsByCategory: Map<MealCategory, List<SavedMeal>> = emptyMap()
+    val savedMealsByCategory: Map<MealCategory, List<SavedMeal>> = emptyMap(),
+    val todayWeight: WeightEntry? = null
 )
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val dailyLogRepository: DailyLogRepository,
     private val savedMealRepository: SavedMealRepository,
-    private val userPreferences: UserPreferences
+    private val userPreferences: UserPreferences,
+    private val weightRepository: WeightRepository
 ) : ViewModel() {
 
     private val today = MutableStateFlow(LocalDate.now())
@@ -44,8 +48,9 @@ class HomeViewModel @Inject constructor(
         today,
         dailyLogRepository.getEntriesForDate(LocalDate.now()),
         userPreferences.calorieGoal,
-        savedMealRepository.getAll()
-    ) { date, entries, goal, savedMeals ->
+        savedMealRepository.getAll(),
+        weightRepository.getForDate(LocalDate.now())
+    ) { date, entries, goal, savedMeals, todayWeight ->
         val grouped = entries.groupBy { it.mealCategory }
         val savedGrouped = savedMeals.groupBy { it.category }
         HomeUiState(
@@ -56,7 +61,8 @@ class HomeViewModel @Inject constructor(
             totalCarbs = entries.sumOf { it.carbsG.toDouble() }.toFloat(),
             totalFat = entries.sumOf { it.fatG.toDouble() }.toFloat(),
             entriesByCategory = grouped,
-            savedMealsByCategory = savedGrouped
+            savedMealsByCategory = savedGrouped,
+            todayWeight = todayWeight
         )
     }.stateIn(
         scope = viewModelScope,
@@ -127,6 +133,18 @@ class HomeViewModel @Inject constructor(
                     )
                 )
             }
+        }
+    }
+
+    fun logWeight(lbs: Float) {
+        viewModelScope.launch {
+            weightRepository.upsert(
+                WeightEntry(
+                    date = LocalDate.now(),
+                    weightLbs = lbs,
+                    recordedAt = Instant.now()
+                )
+            )
         }
     }
 }

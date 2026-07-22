@@ -43,6 +43,7 @@ import com.astute.calories.ui.entry.ServingSizeSheet
 import com.astute.calories.ui.home.components.CalorieProgressRing
 import com.astute.calories.ui.home.components.MacroSummary
 import com.astute.calories.ui.home.components.MealCategoryCard
+import com.astute.calories.ui.home.components.WeightCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -112,6 +113,13 @@ fun HomeScreen(
                     proteinG = uiState.totalProtein,
                     carbsG = uiState.totalCarbs,
                     fatG = uiState.totalFat
+                )
+            }
+
+            item {
+                WeightCard(
+                    todayWeight = uiState.todayWeight,
+                    onLogWeight = { viewModel.logWeight(it) }
                 )
             }
 
