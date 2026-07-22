@@ -23,7 +23,9 @@ Design spec: `docs/superpowers/specs/2026-07-21-weight-tracking-design.md`
 
 The two existing migrations (`MIGRATION_1_2`, `MIGRATION_2_3`) have **no tests**, and `AppDatabase` uses `exportSchema = false`. `MigrationTestHelper` requires an exported `3.json` schema to migrate *from*; none exists, and enabling export now only produces `4.json` going forward. A `MigrationTestHelper` 3→4 test is therefore not viable without hand-authoring schema JSON, which is out of scope and inconsistent with the repo's current approach.
 
-**Coverage decision:** No standalone `MigrationTestHelper` test (consistent with the two existing untested migrations). Migration correctness is protected by (a) matching the DDL column types to `Converters` verbatim, and (b) `WeightDaoTest` opening a real `AppDatabase` at v4 — Room validates the `weight_entries` schema against the entity on open, so an entity/DDL mismatch surfaces there. Purge-exemption is covered by an explicit test in `WeightDaoTest` (Task 1, Step 8).
+**Coverage decision:** No standalone `MigrationTestHelper` test (consistent with the two existing untested migrations). Migration correctness is protected by matching the DDL column types to `Converters` verbatim (LocalDate→TEXT, Instant→INTEGER, Float→REAL) and cross-checking them by review.
+
+**Known limitation (accepted):** the `MIGRATION_3_4` SQL string itself is executed by **no** automated test. `WeightDaoTest` uses `Room.inMemoryDatabaseBuilder`, which builds the schema directly from the `@Entity` definitions and does **not** run migrations — so it validates the *entity* schema, not the migration DDL. A typo in the migration string (e.g. `weightLbs TEXT` instead of `REAL`) would not be caught by these tests; it would only surface as a crash for existing users upgrading from v3. This matches the repo's existing posture (the two prior migrations are likewise untested) and is accepted given the hand-verified DDL. Any *future* column change to `weight_entries` is similarly unguarded — revisit if migrations here become non-trivial. Purge-exemption is covered by an explicit test in `WeightDaoTest` (Task 1, Step 8).
 
 ---
 
