@@ -18,6 +18,7 @@ fun MacroSummary(
     proteinG: Float,
     carbsG: Float,
     fatG: Float,
+    proteinGoalG: Int? = null,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -26,20 +27,25 @@ fun MacroSummary(
     ) {
         MacroItem(label = "Fat", grams = fatG)
         MacroItem(label = "Carbs", grams = carbsG)
-        MacroItem(label = "Protein", grams = proteinG)
+        MacroItem(label = "Protein", grams = proteinG, goalGrams = proteinGoalG)
     }
 }
 
 @Composable
-private fun MacroItem(label: String, grams: Float) {
+private fun MacroItem(label: String, grams: Float, goalGrams: Int? = null) {
+    val valueText = if (goalGrams != null) "${grams.toInt()}g / ${goalGrams}g" else "${grams.toInt()}g"
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.semantics(mergeDescendants = true) {
-            contentDescription = "$label ${grams.toInt()} grams"
+            contentDescription = if (goalGrams != null) {
+                "$label ${grams.toInt()} of $goalGrams grams"
+            } else {
+                "$label ${grams.toInt()} grams"
+            }
         }
     ) {
         Text(
-            text = "${grams.toInt()}g",
+            text = valueText,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold
         )

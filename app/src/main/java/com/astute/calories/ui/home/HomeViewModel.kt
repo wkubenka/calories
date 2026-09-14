@@ -23,6 +23,7 @@ import javax.inject.Inject
 data class HomeUiState(
     val date: LocalDate = LocalDate.now(),
     val calorieGoal: Int = 2000,
+    val proteinGoal: Int = 150,
     val totalCalories: Int = 0,
     val totalProtein: Float = 0f,
     val totalCarbs: Float = 0f,
@@ -44,13 +45,15 @@ class HomeViewModel @Inject constructor(
         today,
         dailyLogRepository.getEntriesForDate(LocalDate.now()),
         userPreferences.calorieGoal,
+        userPreferences.proteinGoal,
         savedMealRepository.getAll()
-    ) { date, entries, goal, savedMeals ->
+    ) { date, entries, goal, proteinGoal, savedMeals ->
         val grouped = entries.groupBy { it.mealCategory }
         val savedGrouped = savedMeals.groupBy { it.category }
         HomeUiState(
             date = date,
             calorieGoal = goal,
+            proteinGoal = proteinGoal,
             totalCalories = entries.sumOf { it.calories },
             totalProtein = entries.sumOf { it.proteinG.toDouble() }.toFloat(),
             totalCarbs = entries.sumOf { it.carbsG.toDouble() }.toFloat(),

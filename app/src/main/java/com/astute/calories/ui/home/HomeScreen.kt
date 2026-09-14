@@ -111,7 +111,8 @@ fun HomeScreen(
                 MacroSummary(
                     proteinG = uiState.totalProtein,
                     carbsG = uiState.totalCarbs,
-                    fatG = uiState.totalFat
+                    fatG = uiState.totalFat,
+                    proteinGoalG = uiState.proteinGoal
                 )
             }
 

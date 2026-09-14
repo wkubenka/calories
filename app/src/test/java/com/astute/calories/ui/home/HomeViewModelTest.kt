@@ -58,6 +58,7 @@ class HomeViewModelTest {
 
         every { dailyLogRepository.getEntriesForDate(any()) } returns flowOf(listOf(sampleEntry))
         every { userPreferences.calorieGoal } returns flowOf(2000)
+        every { userPreferences.proteinGoal } returns flowOf(150)
         every { savedMealRepository.getAll() } returns flowOf(emptyList())
     }
 
@@ -81,6 +82,7 @@ class HomeViewModelTest {
             assertEquals(50f, state.totalCarbs)
             assertEquals(5f, state.totalFat)
             assertEquals(2000, state.calorieGoal)
+            assertEquals(150, state.proteinGoal)
             cancelAndIgnoreRemainingEvents()
         }
     }
