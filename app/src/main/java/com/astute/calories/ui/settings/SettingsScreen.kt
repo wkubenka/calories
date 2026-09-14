@@ -49,6 +49,9 @@ fun SettingsScreen(
     var goalText by rememberSaveable(uiState.calorieGoal) {
         mutableStateOf(uiState.calorieGoal.toString())
     }
+    var proteinGoalText by rememberSaveable(uiState.proteinGoal) {
+        mutableStateOf(uiState.proteinGoal.toString())
+    }
 
     Scaffold(
         topBar = {
@@ -81,6 +84,25 @@ fun SettingsScreen(
                     goalText.toIntOrNull()?.let { viewModel.setCalorieGoal(it) }
                 },
                 label = { Text("Calories") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Protein Goal
+            Text("Daily Protein Goal", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = proteinGoalText,
+                onValueChange = { value ->
+                    proteinGoalText = value.filter { it.isDigit() }
+                    proteinGoalText.toIntOrNull()?.let { viewModel.setProteinGoal(it) }
+                },
+                label = { Text("Protein (g)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()

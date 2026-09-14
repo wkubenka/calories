@@ -22,6 +22,10 @@ class UserPreferences @Inject constructor(
         prefs[CALORIE_GOAL_KEY] ?: DEFAULT_CALORIE_GOAL
     }
 
+    val proteinGoal: Flow<Int> = dataStore.data.map { prefs ->
+        prefs[PROTEIN_GOAL_KEY] ?: DEFAULT_PROTEIN_GOAL
+    }
+
     val resetHour: Flow<Int> = dataStore.data.map { prefs ->
         prefs[RESET_HOUR_KEY] ?: DEFAULT_RESET_HOUR
     }
@@ -38,6 +42,10 @@ class UserPreferences @Inject constructor(
         dataStore.edit { it[CALORIE_GOAL_KEY] = goal }
     }
 
+    suspend fun setProteinGoal(goal: Int) {
+        dataStore.edit { it[PROTEIN_GOAL_KEY] = goal }
+    }
+
     suspend fun setResetHour(hour: Int) {
         dataStore.edit { it[RESET_HOUR_KEY] = hour }
     }
@@ -52,10 +60,12 @@ class UserPreferences @Inject constructor(
 
     companion object {
         val CALORIE_GOAL_KEY = intPreferencesKey("calorie_goal")
+        val PROTEIN_GOAL_KEY = intPreferencesKey("protein_goal")
         val RESET_HOUR_KEY = intPreferencesKey("reset_hour")
         val REMINDER_HOUR_KEY = intPreferencesKey("reminder_hour")
         val REMINDER_ENABLED_KEY = booleanPreferencesKey("reminder_enabled")
         const val DEFAULT_CALORIE_GOAL = 2000
+        const val DEFAULT_PROTEIN_GOAL = 150
         const val DEFAULT_RESET_HOUR = 0
         const val DEFAULT_REMINDER_HOUR = 20
     }

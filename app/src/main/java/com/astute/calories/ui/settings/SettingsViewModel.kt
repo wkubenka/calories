@@ -16,6 +16,7 @@ import javax.inject.Inject
 
 data class SettingsUiState(
     val calorieGoal: Int = 2000,
+    val proteinGoal: Int = 150,
     val resetHour: Int = 0,
     val reminderHour: Int = 20,
     val reminderEnabled: Boolean = false
@@ -29,12 +30,14 @@ class SettingsViewModel @Inject constructor(
 
     val uiState: StateFlow<SettingsUiState> = combine(
         userPreferences.calorieGoal,
+        userPreferences.proteinGoal,
         userPreferences.resetHour,
         userPreferences.reminderHour,
         userPreferences.reminderEnabled
-    ) { goal, resetHour, reminderHour, reminderEnabled ->
+    ) { goal, proteinGoal, resetHour, reminderHour, reminderEnabled ->
         SettingsUiState(
             calorieGoal = goal,
+            proteinGoal = proteinGoal,
             resetHour = resetHour,
             reminderHour = reminderHour,
             reminderEnabled = reminderEnabled
@@ -47,6 +50,10 @@ class SettingsViewModel @Inject constructor(
 
     fun setCalorieGoal(goal: Int) {
         viewModelScope.launch { userPreferences.setCalorieGoal(goal) }
+    }
+
+    fun setProteinGoal(goal: Int) {
+        viewModelScope.launch { userPreferences.setProteinGoal(goal) }
     }
 
     fun setResetHour(hour: Int) {
